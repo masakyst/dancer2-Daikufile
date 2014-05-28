@@ -26,8 +26,8 @@ namespace create => sub {
         );
         my $tt = Template->new;
         {
-            sh q(mkdir -p init.d);
             unless (-e 'init.d/script.tt') {
+                sh q(mkdir -p init.d);
                 sh q(curl -o init.d/script.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/script.tt);
             }
             my $output_script;
@@ -37,8 +37,8 @@ namespace create => sub {
             close $fh;
         }
         {
-            sh q(mkdir -p logrotate.d);
             unless (-e 'logrotate.d/logrotate.tt') {
+                sh q(mkdir -p logrotate.d);
                 sh q(curl -o logrotate.d/logrotate.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/logrotate.tt);
             }
             my $output_logrotate;
