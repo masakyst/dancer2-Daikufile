@@ -1,0 +1,48 @@
+
+use YAML;
+use Template;
+
+
+namespace dancer2 => sub {
+    desc 'dancer2 scaffold';
+    task scaffold => sub {
+    };
+};
+
+namespace create => sub {
+
+    desc 'create app.psgi';
+    task psgi => sub {
+        sh q(cp ./bin/app.pl app.psgi);
+        sh q(chmod 0644 app.psgi);
+        sh q(perl -pi -e 's/\.\.\/lib/lib/g' app.psgi);
+    };
+
+    desc 'create initd script';
+    task initd => sub {
+        my $tt = Template->new;
+        sh q(mkdir -p init.d);
+        sh q(curl -o init.d/template.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/template.tt);
+        my %merged_config = (
+            %{ YAML::LoadFile('config.yml') },
+            %{ YAML::LoadFile('environments/production.yml') }
+        );
+        my $output;
+        $tt->process('init.d/template.tt', \%merged_config, \$output);
+        open my $fh, '>', 'init.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
+        print $fh $output;
+        close $fh;
+    };
+
+};
+
+
+namespace deploy => sub {
+    desc 'deploy application';
+    task app => sub {
+        my ($task, @args) = @_; 
+    };    
+};
+
+
+
