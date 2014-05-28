@@ -20,18 +20,25 @@ namespace create => sub {
 
     desc 'create initd script';
     task initd => sub {
-        my $tt = Template->new;
-        sh q(mkdir -p init.d);
-        sh q(curl -o init.d/template.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/template.tt);
         my %merged_config = (
             %{ YAML::LoadFile('config.yml') },
             %{ YAML::LoadFile('environments/production.yml') }
         );
-        my $output;
-        $tt->process('init.d/template.tt', \%merged_config, \$output);
-        open my $fh, '>', 'init.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
-        print $fh $output;
-        close $fh;
+        my $tt = Template->new;
+        sh q(mkdir -p init.d);
+        sh q(curl -o init.d/script.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/script.tt);
+        my $output_script;
+        $tt->process('init.d/script.tt', \%merged_config, \$output_script);
+        open my $fhi, '>', 'init.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
+        print $fhi $output_script;
+        close $fhi;
+        sh q(mkdir -p logrotate.d);
+        sh q(curl -o init.d/logrotate.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/logrotate.tt);
+        my $output_logrotate;
+        $tt->process('init.d/logrotate.tt', \%merged_config, \$output_logrotate);
+        open my $fhl, '>', 'logrotate.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
+        print $fhl $output_logrotate;
+        close $fhl;
     };
 
 };
@@ -43,6 +50,5 @@ namespace deploy => sub {
         my ($task, @args) = @_; 
     };    
 };
-
 
 
