@@ -66,9 +66,16 @@ namespace create => sub {
 
 
 namespace deploy => sub {
-    desc 'deploy application';
-    task app => sub {
+    desc 'deploy first setup';
+    task setup => sub {
         my ($task, @args) = @_; 
+        my %merged_config = (
+            %{ YAML::LoadFile('config.yml') },
+            %{ YAML::LoadFile('environments/production.yml') }
+        );
+        sh qw(sudo cp ./init.d/$merged_config{appname} /etc/init.d/);
+        sh qw(sudo /sbin/chkconfig --add $merged_config{appname});
+        sh qw(sudo cp ./logrotate.d/$merged_config{appname} /etc/logrotate.d/);
     };    
 };
 
