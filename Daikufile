@@ -2,6 +2,16 @@
 use YAML;
 use Template;
 
+# add enviroments/production.yml
+# deploy app server directory
+#appdir: /home/masakyst/app/HelloWorld
+#user: masakyst
+#group: masakyst
+#psgifile: app.psgi
+#port: 5000
+#perl_version: perl-5.18
+#perlbrew_home: /home/masakyst
+
 
 namespace dancer2 => sub {
     desc 'dancer2 scaffold';
@@ -16,6 +26,9 @@ namespace create => sub {
         sh q(cp ./bin/app.pl app.psgi);
         sh q(chmod 0644 app.psgi);
         sh q(perl -pi -e 's/\.\.\/lib/lib/g' app.psgi);
+        unless (-e 'cpanfile') {
+            sh q(curl -o cpanfile https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/cpanfile);
+        } 
     };
 
     desc 'create initd script';
