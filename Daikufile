@@ -66,6 +66,13 @@ namespace create => sub {
 
 
 namespace deploy => sub {
+
+    desc 'dependencies module install';
+    task install => sub {
+        my ($task, @args) = @_; 
+        sh qw(carton install --deployment);
+    };    
+
     desc 'deploy first setup';
     task setup => sub {
         my ($task, @args) = @_; 
