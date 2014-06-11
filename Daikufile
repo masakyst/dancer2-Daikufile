@@ -49,6 +49,7 @@ namespace create => sub {
             open my $fh, '>', 'init.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
             print $fh $output_script;
             close $fh;
+            sh q(rm init.d/script.tt);
         }
         {
             unless (-e 'logrotate.d/logrotate.tt') {
@@ -60,6 +61,7 @@ namespace create => sub {
             open my $fh, '>', 'logrotate.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
             print $fh $output_logrotate;
             close $fh;
+            sh q(rm logrotate.d/logrotate.tt);
         }
     };
 
