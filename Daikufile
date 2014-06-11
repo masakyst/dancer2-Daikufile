@@ -38,6 +38,7 @@ namespace create => sub {
             %{ YAML::LoadFile('environments/production.yml') }
         );
         my $tt = Template->new;
+        ($merged_config{prog_name} = lc $merged_config{appname}) =~ s/::/\-/;
         {
             unless (-e 'init.d/script.tt') {
                 sh q(mkdir -p init.d);
