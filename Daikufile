@@ -50,6 +50,7 @@ namespace create => sub {
             print $fh $output_script;
             close $fh;
             sh q(rm init.d/script.tt);
+            sh qq(chmod +x init.d/$merged_config{prog_name});
         }
         {
             unless (-e 'logrotate.d/logrotate.tt') {
