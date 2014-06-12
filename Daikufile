@@ -2,7 +2,7 @@
 use YAML;
 use Template;
 
-# add enviroments/production.yml
+# add parameters, enviroments/production.yml
 # deploy app server directory
 #appdir: /home/masakyst/app/HelloWorld
 #user: masakyst
@@ -71,25 +71,31 @@ namespace create => sub {
 
 namespace deploy => sub {
 
-    desc 'dependencies module install';
+    desc 'deploy app on production server';
     task install => sub {
-        my ($task, @args) = @_; 
-        sh qw(carton install --deployment);
+        sh q(carton exec cinnamon --config=deploy.pl production install);
     };    
 
-    desc 'deploy first setup';
-    task setup => sub {
-        my ($task, @args) = @_; 
-        my %merged_config = (
-            %{ YAML::LoadFile('config.yml') },
-            %{ YAML::LoadFile('environments/production.yml') }
-        );
-        sh qw(sudo cp ./init.d/$merged_config{prog_name} /etc/init.d/);
-        sh qw(sudo /sbin/chkconfig --add $merged_config{prog_name});
-        sh qw(sudo cp ./logrotate.d/$merged_config{prog_name} /etc/logrotate.d/);
-        sh qw(sudo mkdir -p /var/run/$merged_config{prog_name});
-        sh qw(sudo mkdir -p /var/lock/subsys/$merged_config{prog_name});
+    desc 'start service on production server';
+    task start => sub {
+        sh q(carton exec cinnamon --config=deploy.pl production start);
     };    
+
+    desc 'stop service on production server';
+    task stop => sub {
+        sh q(carton exec cinnamon --config=deploy.pl production stop);
+    };    
+
+    desc 'restart service on production server';
+    task restart => sub {
+        sh q(carton exec cinnamon --config=deploy.pl production restart);
+    };    
+
+    desc 'app status on production server';
+    task status => sub {
+        sh q(carton exec cinnamon --config=deploy.pl production status);
+    };    
+
 };
 
 
