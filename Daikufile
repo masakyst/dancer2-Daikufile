@@ -84,9 +84,11 @@ namespace deploy => sub {
             %{ YAML::LoadFile('config.yml') },
             %{ YAML::LoadFile('environments/production.yml') }
         );
-        sh qw(sudo cp ./init.d/$merged_config{appname} /etc/init.d/);
-        sh qw(sudo /sbin/chkconfig --add $merged_config{appname});
-        sh qw(sudo cp ./logrotate.d/$merged_config{appname} /etc/logrotate.d/);
+        sh qw(sudo cp ./init.d/$merged_config{prog_name} /etc/init.d/);
+        sh qw(sudo /sbin/chkconfig --add $merged_config{prog_name});
+        sh qw(sudo cp ./logrotate.d/$merged_config{prog_name} /etc/logrotate.d/);
+        sh qw(sudo mkdir -p /var/run/$merged_config{prog_name});
+        sh qw(sudo mkdir -p /var/lock/subsys/$merged_config{prog_name});
     };    
 };
 
