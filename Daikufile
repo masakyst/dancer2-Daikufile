@@ -30,13 +30,19 @@ namespace create => sub {
 
     desc 'create app.psgi (remove bin/app.pl)';
     task psgi => sub {
-        open my $fh, '>', 'app.psgi' or die qw/Can't open file: $!/;
-        print $fh sprintf("use %s; %s->dance;", 
-            $DANCER_CONFIG->config->{appname},
-            $DANCER_CONFIG->config->{appname}
-        );
-        close $fh;
-        unlink './bin/app.pl';
+        {
+            open my $fh, '>', 'app.psgi' or die qw/Can't open file: $!/;
+            print $fh sprintf("use %s; %s->dance;", 
+                $DANCER_CONFIG->config->{appname},
+                $DANCER_CONFIG->config->{appname}
+            );
+            close $fh;
+            unlink './bin/app.pl';
+        }
+        {
+            open my $fh, '>', './bin/.gitkeep' or die qw/Can't open file: $!/;
+            close $fh;
+        }
         unless (-e 'cpanfile') {
             sh q(curl -s -o cpanfile https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/cpanfile);
         } 
