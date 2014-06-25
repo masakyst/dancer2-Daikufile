@@ -27,17 +27,21 @@ namespace dancer2 => sub {
 
 namespace create => sub {
 
-    desc 'create app.psgi';
+    desc 'create app.psgi (remove bin/app.pl)';
     task psgi => sub {
-        sh q(cp ./bin/app.pl app.psgi);
-        sh q(chmod 0644 app.psgi);
-        sh q(perl -pi -e 's/\.\.\/lib/lib/g' app.psgi);
+        open my $fh, '>', 'app.psgi' or die qw/Can't open file: $!/;
+        print $fh sprintf("use %s; %s->dance;", 
+            $DANCER_CONFIG->config->{appname},
+            $DANCER_CONFIG->config->{appname}
+        );
+        close $fh;
+        unlink './bin/app.pl';
         unless (-e 'cpanfile') {
             sh q(curl -s -o cpanfile https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/cpanfile);
         } 
     };
 
-    desc 'create deploy.pl(cinnamon --config)';
+    desc 'create deploy.pl (cinnamon --config)';
     task deploypl => sub {
         unless (-e './deploy.pl') {
             sh q(curl -s -o deploy.pl https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/deploy.pl);
