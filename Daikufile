@@ -2,6 +2,7 @@
 use lib 'lib';
 use YAML;
 use Template;
+use Data::Dumper;
 
 # add parameters, enviroments/production.yml
 # deploy app server directory
@@ -99,43 +100,23 @@ namespace create => sub {
     };
 };
 
-namespace server => sub {
+namespace deploy => sub {
 
-    desc 'アプリをサーバに配置 [PLACK_ENV]';
-    task install => sub {
-        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
-        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} install);
-    };    
+    my @delegate_cinnamon_tasks = (
+        ['install', 'アプリをサーバに配置 [PLACK_ENV]'],
+        ['start',   'アプリを起動         [PLACK_ENV]'],
+        ['stop',    'アプリを停止         [PLACK_ENV]'],
+        ['restart', 'アプリを再起動       [PLACK_ENV]'],
+        ['status',  'アプリの状態を確認   [PLACK_ENV]'],
+        ['update',  'アプリのソースを更新 [PLACK_ENV]'],
+    );
+    for my $task (@delegate_cinnamon_tasks) {
+        desc $task->[1];
+        task $task->[0] => sub {
+            $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+            sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} $task->[0]);
+        };    
+    }
 
-    desc 'アプリを起動 [PLACK_ENV]';
-    task start => sub {
-        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
-        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} start);
-    };    
-
-    desc 'アプリを停止 [PLACK_ENV]';
-    task stop => sub {
-        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
-        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} stop);
-    };    
-
-    desc 'アプリを再起動 [PLACK_ENV]';
-    task restart => sub {
-        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
-        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} restart);
-    };    
-
-    desc 'アプリの状態を確認 [PLACK_ENV]';
-    task status => sub {
-        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
-        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} status);
-    };    
-
-    desc 'アプリのソースを更新 [PLACK_ENV]';
-    task update => sub {
-        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
-        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} update);
-    };    
 };
-
 
