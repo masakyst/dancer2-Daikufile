@@ -1,4 +1,5 @@
 
+use lib 'lib';
 use YAML;
 use Template;
 
@@ -12,11 +13,16 @@ use Template;
 #perl_version: perl-5.18
 #perlbrew_home: /home/masakyst
 
+package TemporaryDancerConfig { use Moo; with 'Dancer2::Core::Role::ConfigReader'; };
+
+my $DANCER_CONFIG = TemporaryDancerConfig->new;
+
 
 namespace dancer2 => sub {
     desc 'dancer2 scaffold';
     task scaffold => sub {
-    };
+        # 未実装
+    };  
 };
 
 namespace create => sub {
@@ -31,71 +37,101 @@ namespace create => sub {
         } 
     };
 
-    desc 'create initd script';
+    desc 'create deploy.pl(cinnamon --config)';
+    task deploypl => sub {
+        unless (-e './deploy.pl') {
+            sh q(curl -s -o deploy.pl https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/deploy.pl);
+        }       
+    };    
+
+    desc 'create init.d script [PLACK_ENV]';
     task initd => sub {
-        my %merged_config = (
-            %{ YAML::LoadFile('config.yml') },
-            %{ YAML::LoadFile('environments/production.yml') }
-        );
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
         my $tt = Template->new;
-        ($merged_config{prog_name} = lc $merged_config{appname}) =~ s/::/\-/;
+        my $config = $DANCER_CONFIG->config;
+        $config->{plack_env} = $DANCER_CONFIG->environment;
+        ($config->{prog_name} = lc $config->{appname}) =~ s/::/\-/;
+        # initdのtemplate
         {
-            unless (-e 'init.d/script.tt') {
+            my $output_script;
+            unless (-e 'init.d/'.$config->{prog_name}) {
                 sh q(mkdir -p init.d);
                 sh q(curl -s -o init.d/script.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/script.tt);
+                $tt->process('init.d/script.tt', $config, \$output_script);
+                open my $fh, '>', 'init.d/'.$config->{prog_name} or die qw/Can't open file: $!/;
+                print $fh $output_script;
+                close $fh;
+                sh q(rm init.d/script.tt);
+                sh qq(chmod +x init.d/$config->{prog_name});
             }
-            my $output_script;
-            $tt->process('init.d/script.tt', \%merged_config, \$output_script);
-            open my $fh, '>', 'init.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
-            print $fh $output_script;
-            close $fh;
-            sh q(rm init.d/script.tt);
-            sh qq(chmod +x init.d/$merged_config{prog_name});
         }
+        # logrotateのtemplate
         {
-            unless (-e 'logrotate.d/logrotate.tt') {
+            my $output_logrotate;
+            unless (-e 'logrotate.d/'.$config->{prog_name}) {
                 sh q(mkdir -p logrotate.d);
                 sh q(curl -s -o logrotate.d/logrotate.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/logrotate.tt);
+                $tt->process('logrotate.d/logrotate.tt', $config, \$output_logrotate);
+                open my $fh, '>', 'logrotate.d/'.$config->{prog_name} or die qw/Can't open file: $!/;
+                print $fh $output_logrotate;
+                close $fh;
+                sh q(rm logrotate.d/logrotate.tt);
             }
-            my $output_logrotate;
-            $tt->process('logrotate.d/logrotate.tt', \%merged_config, \$output_logrotate);
-            open my $fh, '>', 'logrotate.d/'.$merged_config{appname} or die qw/Can't open file: $!/;
-            print $fh $output_logrotate;
-            close $fh;
-            sh q(rm logrotate.d/logrotate.tt);
+        }
+        # 環境settingファイル生成
+        {
+            my $output_setting;
+            unless (-e 'init.d/setting') {
+                sh q(mkdir -p init.d);
+                sh q(curl -s -o init.d/setting.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/setting.tt);
+                $tt->process('init.d/setting.tt', $config, \$output_setting);
+                open my $fh, '>', 'init.d/setting' or die qw/Can't open file: $!/;
+                print $fh $output_setting;
+                close $fh;
+                sh qq(chmod +x init.d/setting);
+                sh q(rm init.d/setting.tt);
+            }
         }
     };
-
 };
 
+namespace server => sub {
 
-namespace deploy => sub {
-
-    desc 'deploy app on production server';
+    desc 'アプリをサーバに配置 [PLACK_ENV]';
     task install => sub {
-        sh q(carton exec cinnamon --config=deploy.pl production install);
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} install);
     };    
 
-    desc 'start service on production server';
+    desc 'アプリを起動 [PLACK_ENV]';
     task start => sub {
-        sh q(carton exec cinnamon --config=deploy.pl production start);
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} start);
     };    
 
-    desc 'stop service on production server';
+    desc 'アプリを停止 [PLACK_ENV]';
     task stop => sub {
-        sh q(carton exec cinnamon --config=deploy.pl production stop);
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} stop);
     };    
 
-    desc 'restart service on production server';
+    desc 'アプリを再起動 [PLACK_ENV]';
     task restart => sub {
-        sh q(carton exec cinnamon --config=deploy.pl production restart);
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} restart);
     };    
 
-    desc 'app status on production server';
+    desc 'アプリの状態を確認 [PLACK_ENV]';
     task status => sub {
-        sh q(carton exec cinnamon --config=deploy.pl production status);
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} status);
     };    
 
+    desc 'アプリのソースを更新 [PLACK_ENV]';
+    task update => sub {
+        $ENV{PLACK_ENV} or die "PLACK_ENV=...";
+        sh qq(PLACK_ENV=$ENV{PLACK_ENV} carton exec cinnamon --config=deploy.pl $ENV{PLACK_ENV} update);
+    };    
 };
 
 
