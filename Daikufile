@@ -2,7 +2,6 @@
 use lib 'lib';
 use YAML;
 use Template;
-use Data::Dumper;
 
 # add parameters, enviroments/production.yml
 # deploy app server directory
@@ -14,13 +13,22 @@ use Data::Dumper;
 #perl_version: perl-5.18
 #perlbrew_home: /home/masakyst
 
-package TemporaryDancerConfig { use Moo; with 'Dancer2::Core::Role::ConfigReader'; };
+package TemporaryDancerConfig { 
+    use Moo; with 'Dancer2::Core::Role::ConfigReader';
+    sub prog_name { 
+        (my $prog_name = lc shift->config->{appname}) =~ s/::/\-/;
+        return $prog_name; 
+    }
+};
 
 my $DANCER_CONFIG = TemporaryDancerConfig->new;
 
 
 namespace scaffold => sub {
     desc 'dancer2 scaffold';
+    task controller => sub {
+        # 未実装
+    };  
     task model => sub {
         # 未実装
     };  
@@ -30,6 +38,7 @@ namespace create => sub {
 
     desc 'create app.psgi (remove bin/app.pl)';
     task psgi => sub {
+        # create app.psgi 
         {
             open my $fh, '>', 'app.psgi' or die qw/Can't open file: $!/;
             print $fh sprintf("use %s; %s->dance;", 
@@ -43,13 +52,29 @@ namespace create => sub {
             open my $fh, '>', './bin/.gitkeep' or die qw/Can't open file: $!/;
             close $fh;
         }
+        {
+            open my $fh, '>', './environments/.gitkeep' or die qw/Can't open file: $!/;
+            close $fh;
+        }
+        {
+            mkdir "logs";
+            open my $fh, '>', './logs/.gitkeep' or die qw/Can't open file: $!/;
+            close $fh;
+        }
+        # setup cpanfile
         unless (-e 'cpanfile') {
             sh q(curl -s -o cpanfile https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/cpanfile);
             open my $fh, '>', '.gitignore' or die qw/Can't open file: $!/;
-            print $fh "local/\nlogs/\nenvironments/development.yml\nenvironments/production.yml\ninit.d/setting\n";
+            print $fh "local/\nlogs/*.log\nenvironments/development.yml\nenvironments/production.yml\ninit.d/setting\n";
             close $fh;
-        }
+        } 
         sh q(carton install);
+        # setup git
+        {
+            sh q(git init);
+            sh q(git add .);
+            sh q(git commit -m "first commit");
+        }
     };
 
     desc 'create deploy.pl (cinnamon --config)';
@@ -65,8 +90,8 @@ namespace create => sub {
         my $tt = Template->new;
         my $config = $DANCER_CONFIG->config;
         $config->{plack_env} = $DANCER_CONFIG->environment;
-        ($config->{prog_name} = lc $config->{appname}) =~ s/::/\-/;
-        # initdのtemplate
+        $config->{prog_name} = $DANCER_CONFIG->prog_name;
+        # initd template
         {
             my $output_script;
             unless (-e 'init.d/'.$config->{prog_name}) {
@@ -80,20 +105,7 @@ namespace create => sub {
                 sh qq(chmod +x init.d/$config->{prog_name});
             }
         }
-        # logrotateのtemplate
-        {
-            my $output_logrotate;
-            unless (-e 'logrotate.d/'.$config->{prog_name}) {
-                sh q(mkdir -p logrotate.d);
-                sh q(curl -s -o logrotate.d/logrotate.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/logrotate.tt);
-                $tt->process('logrotate.d/logrotate.tt', $config, \$output_logrotate);
-                open my $fh, '>', 'logrotate.d/'.$config->{prog_name} or die qw/Can't open file: $!/;
-                print $fh $output_logrotate;
-                close $fh;
-                sh q(rm logrotate.d/logrotate.tt);
-            }
-        }
-        # 環境settingファイル生成
+        # initd setting(inject enviroment)
         {
             my $output_setting;
             unless (-e 'init.d/setting') {
@@ -105,6 +117,19 @@ namespace create => sub {
                 close $fh;
                 sh qq(chmod +x init.d/setting);
                 sh q(rm init.d/setting.tt);
+            }
+        }
+        # logrotateのtemplate
+        {
+            my $output_logrotate;
+            unless (-e 'logrotate.d/'.$config->{prog_name}) {
+                sh q(mkdir -p logrotate.d);
+                sh q(curl -s -o logrotate.d/logrotate.tt https://raw.githubusercontent.com/masakyst/centos-initd-psgi-template/master/logrotate.tt);
+                $tt->process('logrotate.d/logrotate.tt', $config, \$output_logrotate);
+                open my $fh, '>', 'logrotate.d/'.$config->{prog_name} or die qw/Can't open file: $!/;
+                print $fh $output_logrotate;
+                close $fh;
+                sh q(rm logrotate.d/logrotate.tt);
             }
         }
     };
