@@ -4,10 +4,10 @@ use YAML;
 use Template;
 
 # add parameters, enviroments/production.yml
-# deploy app server directory
 #appdir: /home/masakyst/app/HelloWorld
 #user: masakyst
 #group: masakyst
+#password: ''
 #psgifile: app.psgi
 #port: 5000
 #perl_version: perl-5.18
