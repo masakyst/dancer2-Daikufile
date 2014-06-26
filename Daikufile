@@ -19,9 +19,9 @@ package TemporaryDancerConfig { use Moo; with 'Dancer2::Core::Role::ConfigReader
 my $DANCER_CONFIG = TemporaryDancerConfig->new;
 
 
-namespace dancer2 => sub {
+namespace scaffold => sub {
     desc 'dancer2 scaffold';
-    task scaffold => sub {
+    task model => sub {
         # 未実装
     };  
 };
@@ -45,7 +45,11 @@ namespace create => sub {
         }
         unless (-e 'cpanfile') {
             sh q(curl -s -o cpanfile https://raw.githubusercontent.com/masakyst/dancer2-Daikufile/master/cpanfile);
-        } 
+            open my $fh, '>', '.gitignore' or die qw/Can't open file: $!/;
+            print $fh "local/\nlogs/\nenvironments/development.yml\nenvironments/production.yml\ninit.d/setting\n";
+            close $fh;
+        }
+        sh q(carton install);
     };
 
     desc 'create deploy.pl (cinnamon --config)';
@@ -109,12 +113,12 @@ namespace create => sub {
 namespace deploy => sub {
 
     my @delegate_cinnamon_tasks = (
-        ['install', 'アプリをサーバに配置 [PLACK_ENV]'],
-        ['start',   'アプリを起動         [PLACK_ENV]'],
-        ['stop',    'アプリを停止         [PLACK_ENV]'],
-        ['restart', 'アプリを再起動       [PLACK_ENV]'],
-        ['status',  'アプリの状態を確認   [PLACK_ENV]'],
-        ['update',  'アプリのソースを更新 [PLACK_ENV]'],
+        ['install', 'install application on server [PLACK_ENV]'],
+        ['start',   'start application on server   [PLACK_ENV]'],
+        ['stop',    'stop application on server    [PLACK_ENV]'],
+        ['restart', 'restart application on server [PLACK_ENV]'],
+        ['status',  'application status on server  [PLACK_ENV]'],
+        ['update',  'update application on server  [PLACK_ENV]'],
     );
     for my $task (@delegate_cinnamon_tasks) {
         desc $task->[1];
